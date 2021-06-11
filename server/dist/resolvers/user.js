@@ -81,40 +81,42 @@ let UserResolver = class UserResolver {
         return __awaiter(this, void 0, void 0, function* () {
             if (username.length <= 2) {
                 return {
-                    errors: [{
-                            field: 'username',
-                            message: "username must be greater than 2 letters"
-                        }]
+                    errors: [
+                        {
+                            field: "username",
+                            message: "username must be greater than 2 letters",
+                        },
+                    ],
                 };
             }
             if (password.length <= 6) {
                 return {
-                    errors: [{
-                            field: 'password',
-                            message: "password must be greater than 6 letters"
-                        }]
+                    errors: [
+                        {
+                            field: "password",
+                            message: "password must be greater than 6 letters",
+                        },
+                    ],
                 };
             }
             const hashpassword = yield argon2_1.default.hash(password);
-            const user = em.create(User_1.Users, { username, password: hashpassword });
-            try {
-                console.log(yield em.persistAndFlush(user));
+            const user = yield em.findOne(User_1.Users, { username });
+            if (user) {
+                return {
+                    errors: [
+                        {
+                            field: "username",
+                            message: "Username already exists",
+                        },
+                    ],
+                };
             }
-            catch (error) {
-                console.log(error);
-                if (error.code === '23505' || error.detail.includes('already exists')) {
-                    return {
-                        errors: [
-                            {
-                                field: 'username',
-                                message: 'Username already exists',
-                            }
-                        ]
-                    };
-                }
+            else {
+                const newUser = em.create(User_1.Users, { username, password: hashpassword });
+                yield em.persistAndFlush(newUser);
+                req.session.userId = newUser.id;
+                return { user };
             }
-            req.session.userId = user.id;
-            return { user };
         });
     }
     login({ username, password }, { em, req }) {
@@ -122,19 +124,23 @@ let UserResolver = class UserResolver {
             const user = yield em.findOne(User_1.Users, { username });
             if (!user) {
                 return {
-                    errors: [{
-                            field: 'username',
-                            message: "Username doen't exist"
-                        }]
+                    errors: [
+                        {
+                            field: "username",
+                            message: "Username doen't exist",
+                        },
+                    ],
                 };
             }
             const valid = yield argon2_1.default.verify(user.password, password);
             if (!valid) {
                 return {
-                    errors: [{
-                            field: 'password',
-                            message: "Incorrect Password"
-                        }]
+                    errors: [
+                        {
+                            field: "password",
+                            message: "Incorrect Password",
+                        },
+                    ],
                 };
             }
             req.session.userId = user.id;
