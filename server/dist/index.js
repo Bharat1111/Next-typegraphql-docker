@@ -41,7 +41,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             client: redisClient,
             disableTouch: true,
         }),
-        name: "qid",
+        name: constants_1.COOKIE_NAME,
         secret: "aslkdfjoiq12312",
         resave: false,
         saveUninitialized: false,
