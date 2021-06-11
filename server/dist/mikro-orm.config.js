@@ -12,7 +12,7 @@ exports.default = {
         path: path_1.default.join(__dirname, './migrations'),
         pattern: /^[\w-+\d+\.[tj]s$/,
     },
-    entities: [post_1.post, User_1.User],
+    entities: [post_1.post, User_1.Users],
     dbName: 'reddit',
     user: 'postgres',
     password: 'lsg@11_',

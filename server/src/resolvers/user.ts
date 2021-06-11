@@ -1,4 +1,4 @@
-import { User } from "../entities/User";
+import { Users } from "../entities/User";
 import { MyContext } from "src/types";
 import { Ctx, Arg, Resolver, Mutation, InputType, Field, ObjectType, Query } from "type-graphql";
 import argon2 from 'argon2'
@@ -24,13 +24,13 @@ class UserResponse {
     @Field(() => [Error], {nullable: true})
     errors?: Error[]
 
-    @Field(() => User, {nullable: true})
-    user?: User
+    @Field(() => Users, {nullable: true})
+    user?: Users
 }
 
 @Resolver()
 export class UserResolver {
-    @Query(() => User, { nullable: true })
+    @Query(() => Users, { nullable: true })
     async me(
         @Ctx() { em, req }: MyContext
     ) {
@@ -38,7 +38,7 @@ export class UserResolver {
             return null
         }
 
-        const user = await em.findOne(User, { id: req.session.userId })
+        const user = await em.findOne(Users, { id: req.session.userId })
         return user
     }
 
@@ -60,20 +60,22 @@ export class UserResolver {
         if(password.length <= 6) {
             return {
                 errors: [{
-                    field: 'username',
+                    field: 'password',
                     message: "password must be greater than 6 letters"
                 }]
             }
         }
 
         const hashpassword = await argon2.hash(password)
-        const user = em.create(User, { username, password: hashpassword });
+        const user = em.create(Users, { username, password: hashpassword });
+
         try {
-            await em.persistAndFlush(user);
+            console.log(await em.persistAndFlush(user))
         } catch (error) {
-            if(error.code === '23505' ) {
+            console.log(error)
+            if(error.code === '23505' || error.detail.includes('already exists')) {
                 return {
-                    error: [
+                    errors: [
                         {
                             field: 'username',
                             message: 'Username already exists',
@@ -93,7 +95,7 @@ export class UserResolver {
         @Arg("options") { username, password }: UsernamePasswordInput,
         @Ctx() { em, req }: MyContext
     ) {
-        const user = await em.findOne(User, { username })
+        const user = await em.findOne(Users, { username })
         if(!user) {
             return {
                 errors: [{

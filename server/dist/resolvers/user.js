@@ -61,8 +61,8 @@ __decorate([
     __metadata("design:type", Array)
 ], UserResponse.prototype, "errors", void 0);
 __decorate([
-    type_graphql_1.Field(() => User_1.User, { nullable: true }),
-    __metadata("design:type", User_1.User)
+    type_graphql_1.Field(() => User_1.Users, { nullable: true }),
+    __metadata("design:type", User_1.Users)
 ], UserResponse.prototype, "user", void 0);
 UserResponse = __decorate([
     type_graphql_1.ObjectType()
@@ -73,7 +73,7 @@ let UserResolver = class UserResolver {
             if (!req.session.userId) {
                 return null;
             }
-            const user = yield em.findOne(User_1.User, { id: req.session.userId });
+            const user = yield em.findOne(User_1.Users, { id: req.session.userId });
             return user;
         });
     }
@@ -90,20 +90,21 @@ let UserResolver = class UserResolver {
             if (password.length <= 6) {
                 return {
                     errors: [{
-                            field: 'username',
+                            field: 'password',
                             message: "password must be greater than 6 letters"
                         }]
                 };
             }
             const hashpassword = yield argon2_1.default.hash(password);
-            const user = em.create(User_1.User, { username, password: hashpassword });
+            const user = em.create(User_1.Users, { username, password: hashpassword });
             try {
-                yield em.persistAndFlush(user);
+                console.log(yield em.persistAndFlush(user));
             }
             catch (error) {
-                if (error.code === '23505') {
+                console.log(error);
+                if (error.code === '23505' || error.detail.includes('already exists')) {
                     return {
-                        error: [
+                        errors: [
                             {
                                 field: 'username',
                                 message: 'Username already exists',
@@ -118,7 +119,7 @@ let UserResolver = class UserResolver {
     }
     login({ username, password }, { em, req }) {
         return __awaiter(this, void 0, void 0, function* () {
-            const user = yield em.findOne(User_1.User, { username });
+            const user = yield em.findOne(User_1.Users, { username });
             if (!user) {
                 return {
                     errors: [{
@@ -142,7 +143,7 @@ let UserResolver = class UserResolver {
     }
 };
 __decorate([
-    type_graphql_1.Query(() => User_1.User, { nullable: true }),
+    type_graphql_1.Query(() => User_1.Users, { nullable: true }),
     __param(0, type_graphql_1.Ctx()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),

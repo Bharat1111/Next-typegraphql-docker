@@ -1,10 +1,9 @@
-import { Entity, PrimaryKey, Property } from "@mikro-orm/core/decorators";
-import { Field, ObjectType } from "type-graphql";
+import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
+import { ObjectType, Field } from "type-graphql";
 
 @ObjectType()
 @Entity()
-export class User {
-
+export class Users {
   @Field()
   @PrimaryKey()
   id!: number;
@@ -18,10 +17,9 @@ export class User {
   updatedAt = new Date();
 
   @Field()
-  @Property({ type: 'text', unique: true })
+  @Property({ type: "text", unique: true })
   username!: string;
 
-  @Property({ type: 'text' })
+  @Property({ type: "text" })
   password!: string;
-
 }
