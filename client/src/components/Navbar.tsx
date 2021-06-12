@@ -30,13 +30,15 @@ const Navbar = () => {
     body = (
       <Flex>
         <Box mr={3}>{data.me.username}</Box>
-        <Button isLoading={loading} onClick={() => logout()} variant="link">Logout</Button>
+          <Button isLoading={loading} onClick={() => logout()} variant="link">Logout</Button>
       </Flex>
     );
   }
   return (
     <Flex zIndex={1} position="sticky" top={0} bg="tan" p={4}>
-      <Box ml={"auto"}>{body}</Box>
+      <Box ml={"auto"}>
+        {body}
+      </Box>
     </Flex>
   );
 };
