@@ -14,7 +14,7 @@ import { UserResolver } from "./resolvers/user";
 import { redis } from "./redis";
 import { Users } from "./entities/User";
 import { Post } from "./entities/Post";
-// import path from "path";
+import path from "path";
 
 const main = async () => {
   const conn = await createConnection({
@@ -24,11 +24,11 @@ const main = async () => {
     password: 'lsg@11_',
     logging: true,
     synchronize: true,
-    // migrations: [path.join(__dirname, './migrations/*')],
+    migrations: [path.join(__dirname, './migrations/*')],
     entities: [Post, Users]
   })
 
-  // conn.runMigrations()
+  conn.runMigrations()
 
   const app = express();
 
