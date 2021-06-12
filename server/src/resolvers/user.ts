@@ -11,10 +11,15 @@ import {
   Query,
 } from "type-graphql";
 import argon2 from "argon2";
-import { COOKIE_NAME } from "../constants";
+import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from "../constants";
+import { sendEmail } from "../utils/sendEmail";
+import { v4 } from "uuid";
+import { redis } from "../redis";
 
 @InputType()
 class UsernamePasswordInput {
+  @Field()
+  email: string;
   @Field()
   username: string;
   @Field()
@@ -40,6 +45,83 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Mutation(() => UserResponse)
+  async changePassword(
+    @Arg("token") token: string,
+    @Arg("newPassword") newPassword: string,
+    @Ctx() { req, em }: MyContext
+  ): Promise<UserResponse> {
+    if (newPassword.length <= 6) {
+      return {
+        errors: [
+          {
+            field: "newPassword",
+            message: "password must be greater than 6 letters",
+          },
+        ],
+      };
+    }
+
+    const key = FORGOT_PASSWORD_PREFIX + token;
+    const userId = await redis.get(key);
+    if (!userId) {
+      return {
+        errors: [
+          {
+            field: "token",
+            message: "token expired",
+          },
+        ],
+      };
+    }
+
+    const user = await em.findOne(Users, { id: parseInt(userId) });
+
+    if (!user) {
+      return {
+        errors: [
+          {
+            field: "token",
+            message: "user no longer exists",
+          },
+        ],
+      };
+    }
+
+    user.password = await argon2.hash(newPassword);
+    await em.persistAndFlush(user);
+
+    await redis.del(key);
+
+    // log in user after change password
+    req.session.userId = user.id;
+
+    return { user };
+  }
+
+  @Mutation(() => Boolean)
+  async forgotPassword(@Arg("email") email: string, @Ctx() { em }: MyContext) {
+    const user = await em.findOne(Users, { email });
+    if (!user) {
+      return true;
+    }
+
+    const token = v4();
+
+    await redis.set(
+      FORGOT_PASSWORD_PREFIX + token,
+      user.id,
+      "ex",
+      1000 * 60 * 60 * 24 * 3
+    );
+
+    await sendEmail(
+      email,
+      `<a href="http://localhost:3000/change-password/${token}">reset password</a>`
+    );
+    return false;
+  }
+
   @Query(() => Users, { nullable: true })
   async me(@Ctx() { em, req }: MyContext) {
     if (!req.session.userId) {
@@ -52,7 +134,7 @@ export class UserResolver {
 
   @Mutation(() => UserResponse)
   async register(
-    @Arg("options") { username, password }: UsernamePasswordInput,
+    @Arg("options") { email, username, password }: UsernamePasswordInput,
     @Ctx() { em, req }: MyContext
   ) {
     if (username.length <= 2) {
@@ -60,7 +142,20 @@ export class UserResolver {
         errors: [
           {
             field: "username",
-            message: "username must be greater than 2 letters",
+            message: "Username must be greater than 2 letters",
+          },
+        ],
+      };
+    }
+
+    const regex =
+      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+    if (!regex.test(email)) {
+      return {
+        errors: [
+          {
+            field: "email",
+            message: "Email is not valid!",
           },
         ],
       };
@@ -90,29 +185,38 @@ export class UserResolver {
         ],
       };
     } else {
-      const newUser = em.create(Users, { username, password: hashpassword });
+      const newUser = em.create(Users, {
+        email,
+        username,
+        password: hashpassword,
+      });
 
       await em.persistAndFlush(newUser);
       // console.log('user: ', user)
       req.session.userId = newUser.id;
       return { user };
     }
-
-
   }
 
   @Mutation(() => UserResponse)
   async login(
-    @Arg("options") { username, password }: UsernamePasswordInput,
+    @Arg("usernameOrEmail") usernameOrEmail: string,
+    @Arg("password") password: string,
     @Ctx() { em, req }: MyContext
   ) {
-    const user = await em.findOne(Users, { username });
+    const user = await em.findOne(
+      Users,
+      usernameOrEmail.includes("@")
+        ? { email: usernameOrEmail }
+        : { username: usernameOrEmail }
+    );
+
     if (!user) {
       return {
         errors: [
           {
-            field: "username",
-            message: "Username doen't exist",
+            field: "usernameOrEmail",
+            message: "Username or Email doesn't exist",
           },
         ],
       };
@@ -137,21 +241,18 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
-  logout(
-    @Ctx() { req, res }: MyContext
-  ) {
-    
-    return new Promise(resolve =>  req.session.destroy(
-      err => {
-        if(err) {
-          console.log(err)
-          resolve(false)
-          return
+  logout(@Ctx() { req, res }: MyContext) {
+    return new Promise((resolve) =>
+      req.session.destroy((err) => {
+        if (err) {
+          console.log(err);
+          resolve(false);
+          return;
         }
-        
-        res.clearCookie(COOKIE_NAME)
-        resolve(true)
-      }
-    ))
+
+        res.clearCookie(COOKIE_NAME);
+        resolve(true);
+      })
+    );
   }
 }
