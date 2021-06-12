@@ -1,61 +1,43 @@
-import { Ctx, Query, Arg, Resolver, Mutation } from "type-graphql";
+import { Query, Arg, Resolver, Mutation } from "type-graphql";
 import { post } from "../entities/post";
-import { MyContext } from "src/types";
 
 @Resolver()
 export class PostResolver {
-    @Query(() => [post])
-    posts(
-        @Ctx() {em}: MyContext
-    ): Promise<post[]> {
-        return em.find(post, {});
-    }
-    
-    @Query(() => post, { nullable: true })
-    post(
-        @Arg('id') id: number,
-        @Ctx() {em}: MyContext
-    ): Promise<post | null> {
-        return em.findOne(post, { id });
-    }
-    
-    @Mutation(() => post)
-    async createPost(
-        @Arg('title') title: String,
-        @Ctx() {em}: MyContext) {
-            const Post = em.create(post, { title }); // mikroorm syntax
-            await em.persistAndFlush(Post);
-            return Post;
-    }
-    
-    @Mutation(() => post, { nullable: true })
-    async updatePost(
-        @Arg('id') id: number,
-        @Arg('title', () => String, { nullable: true }) title: string,
-        @Ctx() {em}: MyContext): Promise<post | null> {
-            const Post = await em.findOne(post, {id})
+  @Query(() => [post])
+  posts(): Promise<post[]> {
+    return post.find();
+  }
 
-            if(!Post) {
-                return null
-            }
+  @Query(() => post, { nullable: true })
+  post(@Arg("id") id: number): Promise<post | undefined> {
+    return post.findOne(id);
+  }
 
-            if(typeof title !== 'undefined') {
-                Post.title = title
-                await em.persistAndFlush(Post);
-            }
-            return Post;
+  @Mutation(() => post)
+  async createPost(@Arg("title") title: string): Promise<post> {
+    return post.create({ title }).save();
+  }
+
+  @Mutation(() => post, { nullable: true })
+  async updatePost(
+    @Arg("id") id: number,
+    @Arg("title", () => String, { nullable: true }) title: string
+  ): Promise<post | null> {
+    const Post = await post.findOne(id);
+
+    if (!Post) {
+      return null;
     }
-    
-    @Mutation(() => Boolean)
-    async deletePost(
-        @Arg('id') id: number,
-        @Ctx() {em}: MyContext
-    ): Promise<boolean> {        
-            // try {
-                em.nativeDelete(post, {id})
-                return true;
-            // } catch (error) {
-                // console.log(error)
-            // }
+
+    if (typeof title !== "undefined") {
+      post.update({ id }, { title });
     }
+    return Post;
+  }
+
+  @Mutation(() => Boolean)
+  async deletePost(@Arg("id") id: number): Promise<boolean> {
+    post.delete(id);
+    return true;
+  }
 }

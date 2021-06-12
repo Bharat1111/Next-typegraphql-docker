@@ -16,7 +16,7 @@ const ForgotPassword: React.FC<{}> = ({}) => {
       <Formik
         initialValues={{ email: "" }}
         onSubmit={async (values) => {
-        //   await forgotPassword(values);
+          await forgotPassword(values);
           setComplete(true);
         }}
       >
