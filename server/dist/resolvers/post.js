@@ -23,60 +23,76 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostResolver = void 0;
 const type_graphql_1 = require("type-graphql");
-const post_1 = require("../entities/post");
+const isAuth_1 = require("../utils/isAuth");
+const Post_1 = require("../entities/Post");
+let PostInput = class PostInput {
+};
+__decorate([
+    type_graphql_1.Field(),
+    __metadata("design:type", String)
+], PostInput.prototype, "title", void 0);
+__decorate([
+    type_graphql_1.Field(),
+    __metadata("design:type", String)
+], PostInput.prototype, "text", void 0);
+PostInput = __decorate([
+    type_graphql_1.InputType()
+], PostInput);
 let PostResolver = class PostResolver {
     posts() {
-        return post_1.post.find();
+        return Post_1.Post.find();
     }
     post(id) {
-        return post_1.post.findOne(id);
+        return Post_1.Post.findOne(id);
     }
-    createPost(title) {
+    createPost(input, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
-            return post_1.post.create({ title }).save();
+            return Post_1.Post.create(Object.assign(Object.assign({}, input), { creatorId: req.session.userId })).save();
         });
     }
     updatePost(id, title) {
         return __awaiter(this, void 0, void 0, function* () {
-            const Post = yield post_1.post.findOne(id);
-            if (!Post) {
-                return null;
+            const post = yield Post_1.Post.findOne(id);
+            if (!post) {
+                return undefined;
             }
             if (typeof title !== "undefined") {
-                post_1.post.update({ id }, { title });
+                Post_1.Post.update({ id }, { title });
             }
-            return Post;
+            return post;
         });
     }
     deletePost(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            post_1.post.delete(id);
+            Post_1.Post.delete(id);
             return true;
         });
     }
 };
 __decorate([
-    type_graphql_1.Query(() => [post_1.post]),
+    type_graphql_1.Query(() => [Post_1.Post]),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], PostResolver.prototype, "posts", null);
 __decorate([
-    type_graphql_1.Query(() => post_1.post, { nullable: true }),
+    type_graphql_1.Query(() => Post_1.Post, { nullable: true }),
     __param(0, type_graphql_1.Arg("id")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], PostResolver.prototype, "post", null);
 __decorate([
-    type_graphql_1.Mutation(() => post_1.post),
-    __param(0, type_graphql_1.Arg("title")),
+    type_graphql_1.Mutation(() => Post_1.Post),
+    type_graphql_1.UseMiddleware(isAuth_1.isAuth),
+    __param(0, type_graphql_1.Arg("input")),
+    __param(1, type_graphql_1.Ctx()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [PostInput, Object]),
     __metadata("design:returntype", Promise)
 ], PostResolver.prototype, "createPost", null);
 __decorate([
-    type_graphql_1.Mutation(() => post_1.post, { nullable: true }),
+    type_graphql_1.Mutation(() => Post_1.Post, { nullable: true }),
     __param(0, type_graphql_1.Arg("id")),
     __param(1, type_graphql_1.Arg("title", () => String, { nullable: true })),
     __metadata("design:type", Function),

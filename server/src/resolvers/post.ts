@@ -1,43 +1,71 @@
-import { Query, Arg, Resolver, Mutation } from "type-graphql";
-import { post } from "../entities/post";
+import {
+  Resolver,
+  Query,
+  Arg,
+  Mutation,
+  InputType,
+  Field,
+  Ctx,
+  UseMiddleware,
+} from "type-graphql";
+
+import { isAuth } from "../utils/isAuth";
+import { Post } from "../entities/Post";
+import { MyContext } from "../types";
+
+@InputType()
+class PostInput {
+  @Field()
+  title: String;
+  @Field()
+  text: String;
+}
 
 @Resolver()
 export class PostResolver {
-  @Query(() => [post])
-  posts(): Promise<post[]> {
-    return post.find();
+  @Query(() => [Post])
+  posts(): Promise<Post[]> {
+    return Post.find();
   }
 
-  @Query(() => post, { nullable: true })
-  post(@Arg("id") id: number): Promise<post | undefined> {
-    return post.findOne(id);
+  @Query(() => Post, { nullable: true })
+  post(@Arg("id") id: number): Promise<Post | undefined> {
+    return Post.findOne(id);
   }
 
-  @Mutation(() => post)
-  async createPost(@Arg("title") title: string): Promise<post> {
-    return post.create({ title }).save();
+  @Mutation(() => Post)
+  @UseMiddleware(isAuth)
+  async createPost(
+    @Arg("input") input: PostInput,
+    @Ctx() { req }: MyContext
+  ): Promise<Post> {
+    
+    return Post.create({
+      ...input,
+      creatorId: req.session.userId,
+    }).save();
   }
 
-  @Mutation(() => post, { nullable: true })
+  @Mutation(() => Post, { nullable: true })
   async updatePost(
     @Arg("id") id: number,
     @Arg("title", () => String, { nullable: true }) title: string
-  ): Promise<post | null> {
-    const Post = await post.findOne(id);
+  ): Promise<Post | undefined> {
+    const post = await Post.findOne(id);
 
-    if (!Post) {
-      return null;
+    if (!post) {
+      return undefined;
     }
 
     if (typeof title !== "undefined") {
-      post.update({ id }, { title });
+      Post.update({ id }, { title });
     }
-    return Post;
+    return post;
   }
 
   @Mutation(() => Boolean)
   async deletePost(@Arg("id") id: number): Promise<boolean> {
-    post.delete(id);
+    Post.delete(id);
     return true;
   }
 }

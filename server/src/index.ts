@@ -8,13 +8,12 @@ import connectRedis from "connect-redis";
 import { createConnection } from 'typeorm'
 
 import { COOKIE_NAME, __prod__ } from "./constants";
-// import { post } from './entities/post'
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import { redis } from "./redis";
-import { post } from "./entities/post";
 import { Users } from "./entities/User";
+import { Post } from "./entities/Post";
 
 const main = async () => {
   await createConnection({
@@ -24,7 +23,7 @@ const main = async () => {
     password: 'lsg@11_',
     logging: true,
     synchronize: true,
-    entities: [post, Users]
+    entities: [Post, Users]
   })
 
   const app = express();
