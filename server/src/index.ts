@@ -14,17 +14,21 @@ import { UserResolver } from "./resolvers/user";
 import { redis } from "./redis";
 import { Users } from "./entities/User";
 import { Post } from "./entities/Post";
+// import path from "path";
 
 const main = async () => {
-  await createConnection({
+  const conn = await createConnection({
     type: 'postgres',
     database: 'lireddit',
     username: 'postgres',
     password: 'lsg@11_',
     logging: true,
     synchronize: true,
+    // migrations: [path.join(__dirname, './migrations/*')],
     entities: [Post, Users]
   })
+
+  // conn.runMigrations()
 
   const app = express();
 

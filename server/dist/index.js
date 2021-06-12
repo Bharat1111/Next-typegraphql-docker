@@ -28,7 +28,7 @@ const redis_1 = require("./redis");
 const User_1 = require("./entities/User");
 const Post_1 = require("./entities/Post");
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
-    yield typeorm_1.createConnection({
+    const conn = yield typeorm_1.createConnection({
         type: 'postgres',
         database: 'lireddit',
         username: 'postgres',
