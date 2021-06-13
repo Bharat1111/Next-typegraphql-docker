@@ -185,8 +185,8 @@ export class PostResolver {
   }
 
   @Query(() => Post, { nullable: true })
-  post(@Arg("id") id: number): Promise<Post | undefined> {
-    return Post.findOne(id);
+  post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
+    return Post.findOne(id, { relations: ["creator"] });
   }
 
   @Mutation(() => Post)
@@ -202,25 +202,42 @@ export class PostResolver {
   }
 
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth)
   async updatePost(
-    @Arg("id") id: number,
-    @Arg("title", () => String, { nullable: true }) title: string
-  ): Promise<Post | undefined> {
-    const post = await Post.findOne(id);
+    @Arg("id", () => Int) id: number,
+    @Arg("title") title: string,
+    @Arg("text") text: string,
+    @Ctx() { req }: MyContext
+  ): Promise<Post | null> {
 
-    if (!post) {
-      return undefined;
-    }
+    const result = await getConnection()
+    .createQueryBuilder()
+    .update('Post')
+    .set({ title, text })
+    .where('id = :id and "creatorId" = :creatorId', { id, creatorId: req.session.userId })
+    .returning('*')
+    .execute()
 
-    if (typeof title !== "undefined") {
-      Post.update({ id }, { title });
-    }
-    return post;
+    return result.raw[0] as any
   }
 
   @Mutation(() => Boolean)
-  async deletePost(@Arg("id") id: number): Promise<boolean> {
-    Post.delete(id);
+  @UseMiddleware(isAuth)
+  async deletePost(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { req }: MyContext
+  ): Promise<boolean> {
+    const post = await Post.findOne(id)
+    if(!post) {
+      return false
+    }
+
+    if(post.creatorId !== req.session.userId) {
+      throw new Error('not authorized')
+    }
+
+    await Updoot.delete({ postId: id })
+    await Post.delete({ id });
     return true;
   }
 }
