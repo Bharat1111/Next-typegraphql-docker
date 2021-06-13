@@ -9,25 +9,31 @@ import { InputField } from "../components/InputField";
 import { createUrqlClient } from "../utils/createUrqlClient";
 import { useCreatePostMutation, useMeQuery } from "../generated/graphql";
 import { Layout } from "../components/Layout";
+import { withApollo } from "../utils/withApollo";
 
 const CreatePost = () => {
   const router = useRouter();
-  const [{ data, fetching }] = useMeQuery();
-  const [, createPost] = useCreatePostMutation();
+  const { data, loading } = useMeQuery();
+  const [createPost] = useCreatePostMutation();
 
   useEffect(() => {
-    if (!fetching && !data?.me) {
+    if (!loading && !data?.me) {
       router.replace("/login?next=" + router.pathname);
     }
-  }, [data, router, fetching]);
+  }, [data, router, loading]);
   return (
     <Layout variant="small">
       <Formik
         initialValues={{ text: "", title: "" }}
         onSubmit={async (values) => {
-          const { error } = await createPost({ input: values });
+          const { errors } = await createPost({ 
+            variables: { input: values },
+            update: (cache) => {
+              cache.evict({ fieldName: 'posts:{}' })
+            }
+          });
 
-          if (!error) {
+          if (!errors) {
             router.push("/");
           }
         }}
@@ -58,4 +64,4 @@ const CreatePost = () => {
   );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(CreatePost);
+export default withApollo({ ssr: false })(CreatePost)

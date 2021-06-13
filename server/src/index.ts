@@ -14,24 +14,24 @@ import { UserResolver } from "./resolvers/user";
 import { redis } from "./redis";
 import { Users } from "./entities/User";
 import { Post } from "./entities/Post";
-import path from "path";
+// import path from "path";
 import { Updoot } from "./entities/Updoot";
 import { createUserLoader } from "./utils/createUserLoader";
 import { createUpdootLoader } from "./utils/createUpdootLoader";
 
 const main = async () => {
-  const conn = await createConnection({
+  await createConnection({
     type: "postgres",
     database: "lireddit",
     username: "postgres",
     password: "lsg@11_",
     logging: true,
     synchronize: true,
-    migrations: [path.join(__dirname, "./migrations/*")],
+    // migrations: [path.join(__dirname, "./migrations/*")],
     entities: [Post, Users, Updoot],
   });
 
-  conn.runMigrations();
+  // conn.runMigrations();
 
   const app = express();
 

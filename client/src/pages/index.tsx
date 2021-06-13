@@ -14,22 +14,26 @@ import { Layout } from "../components/Layout";
 import { usePostsQuery } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
 import { EditDeletePostButtons } from "../components/EditDeletePostButtons";
-import { useState } from "react";
 import { UpdootSection } from "../components/UpdootSection";
+import { withApollo } from "../utils/withApollo";
 
 const Index = () => {
-  const [variables, setVariables] = useState({
-    limit: 15,
-    cursor: null as null | string,
-  });
+  // const [variables, setVariables] = useState({
+  //   limit: 15,
+  //   cursor: null as null | string,
+  // });
 
-  const [{ data, fetching }] = usePostsQuery({
-    variables,
+  const { data, loading, fetchMore, variables } = usePostsQuery({
+    variables: {
+      limit: 15,
+      cursor: null 
+    },
+    // notifyOnNetworkStatusChange: true,
   });
 
   return (
     <Layout>
-      {fetching ? (
+      {loading ? (
         <div>Loading...</div>
       ) : !data ? (
         <div>No Posts</div>
@@ -74,13 +78,15 @@ const Index = () => {
             <Flex>
               <Button
                 onClick={() => {
-                  setVariables({
-                    limit: variables.limit,
-                    cursor:
-                      data.posts.posts[data.posts.posts.length - 1].createdAt,
-                  });
+                  fetchMore({
+                    variables: {
+                      limit: variables?.limit,
+                      cursor:
+                        data.posts.posts[data.posts.posts.length - 1].createdAt,
+                    },
+                  })
                 }}
-                isLoading={fetching}
+                isLoading={loading}
                 m="auto"
                 my={8}
               >
@@ -94,4 +100,4 @@ const Index = () => {
   );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(Index);
+export default withApollo({ ssr: true })(Index)

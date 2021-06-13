@@ -11,21 +11,22 @@ import {
   usePostQuery,
   useUpdatePostMutation,
 } from "../../../generated/graphql";
+import { withApollo } from "../../../utils/withApollo";
 
 const UpdatePost = ({}) => {
     const router = useRouter();
-    const [, updatePost] = useUpdatePostMutation();
+    const [updatePost] = useUpdatePostMutation();
 
     const intId =
     typeof router.query.id === "string" ? parseInt(router.query.id) : -1;
-    const [{ data, fetching }] = usePostQuery({
-    pause: intId === -1,
+    const { data, loading } = usePostQuery({
+    skip: intId === -1,
     variables: {
       id: intId,
     },
   });
 
-    if(fetching) {
+    if(loading) {
         return (
             <Layout>
                 <div>Loading...</div>
@@ -46,7 +47,7 @@ const UpdatePost = ({}) => {
             <Formik
                 initialValues={{ text: data.post.text, title: data.post.title }}
                 onSubmit={async (values) => {
-                    await updatePost({ id: intId, ...values })
+                    await updatePost({ variables: { id: intId, ...values } })
                     router.back()
                 }}
             >
@@ -76,4 +77,4 @@ const UpdatePost = ({}) => {
     );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(UpdatePost);
+export default withApollo({ ssr: false })(UpdatePost)

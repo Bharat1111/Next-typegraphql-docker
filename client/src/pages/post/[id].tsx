@@ -6,19 +6,20 @@ import { usePostQuery } from "../../generated/graphql";
 import { Layout } from "../../components/Layout";
 import { EditDeletePostButtons } from "../../components/EditDeletePostButtons";
 import { Heading, Box } from "@chakra-ui/react";
+import { withApollo } from "../../utils/withApollo";
 
 const Post = ({}) => {
   const router = useRouter();
   const intId =
     typeof router.query.id === "string" ? parseInt(router.query.id) : -1;
-  const [{ data, error, fetching }] = usePostQuery({
-    pause: intId === -1,
+  const { data, error, loading } = usePostQuery({
+    skip: intId === -1,
     variables: {
       id: intId,
     },
   });
 
-  if (fetching) {
+  if (loading) {
     return (
       <Layout>
         <div>Loading...</div>
@@ -50,4 +51,4 @@ const Post = ({}) => {
   );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(Post);
+export default withApollo({ ssr: true })(Post)
