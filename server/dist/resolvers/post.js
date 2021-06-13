@@ -27,6 +27,7 @@ const isAuth_1 = require("../utils/isAuth");
 const Post_1 = require("../entities/Post");
 const Updoot_1 = require("../entities/Updoot");
 const typeorm_1 = require("typeorm");
+const User_1 = require("../entities/User");
 let PostInput = class PostInput {
 };
 __decorate([
@@ -56,6 +57,20 @@ PaginatedPosts = __decorate([
 let PostResolver = class PostResolver {
     textSnippet(root) {
         return root.text.slice(0, 50);
+    }
+    creator(post, { userLoader }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return userLoader.load(post.creatorId);
+        });
+    }
+    voteStatus(post, { updootLoader, req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                return null;
+            }
+            const updoot = yield updootLoader.load({ postId: post.id, userId: req.session.userId });
+            return updoot ? updoot.value : null;
+        });
     }
     vote(postId, value, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -93,35 +108,18 @@ let PostResolver = class PostResolver {
             return true;
         });
     }
-    posts(limit, cursor, { req }) {
+    posts(limit, cursor) {
         return __awaiter(this, void 0, void 0, function* () {
             const realLimit = Math.min(50, limit);
             const reaLimitPlusOne = realLimit + 1;
             const replacements = [reaLimitPlusOne];
-            let cursorIdx = 3;
             if (cursor) {
                 replacements.push(new Date(parseInt(cursor)));
-                cursorIdx = replacements.length;
-            }
-            const userID = yield req.session.userId;
-            if (userID) {
-                replacements.push(userID);
             }
             const posts = yield typeorm_1.getConnection().query(`
-    select p.*,
-    json_build_object(
-      'id', u.id,
-      'username', u.username,
-      'email', u.email,
-      'createdAt', u."createdAt",
-      'updatedAt', u."updatedAt"
-      ) creator,
-      ${userID
-                ? '(select value from updoot where "userId" = $2 and "postId" = p.id) "voteStatus"'
-                : 'null as "voteStatus"'}
+    select p.*
     from post p
-    inner join public.users u on u.id = p."creatorId"
-    ${cursor ? `where p."createdAt" < $${cursorIdx}` : ""}
+    ${cursor ? `where p."createdAt" < $2` : ""}
     order by p."createdAt" DESC
     limit $1
     `, replacements);
@@ -132,7 +130,7 @@ let PostResolver = class PostResolver {
         });
     }
     post(id) {
-        return Post_1.Post.findOne(id, { relations: ["creator"] });
+        return Post_1.Post.findOne(id);
     }
     createPost(input, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -174,6 +172,22 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], PostResolver.prototype, "textSnippet", null);
 __decorate([
+    type_graphql_1.FieldResolver(() => User_1.Users),
+    __param(0, type_graphql_1.Root()),
+    __param(1, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Post_1.Post, Object]),
+    __metadata("design:returntype", Promise)
+], PostResolver.prototype, "creator", null);
+__decorate([
+    type_graphql_1.FieldResolver(() => type_graphql_1.Int, { nullable: true }),
+    __param(0, type_graphql_1.Root()),
+    __param(1, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Post_1.Post, Object]),
+    __metadata("design:returntype", Promise)
+], PostResolver.prototype, "voteStatus", null);
+__decorate([
     type_graphql_1.Mutation(() => Boolean),
     type_graphql_1.UseMiddleware(isAuth_1.isAuth),
     __param(0, type_graphql_1.Arg("postId", () => type_graphql_1.Int)),
@@ -187,9 +201,8 @@ __decorate([
     type_graphql_1.Query(() => PaginatedPosts),
     __param(0, type_graphql_1.Arg("limit", () => type_graphql_1.Int)),
     __param(1, type_graphql_1.Arg("cursor", () => String, { nullable: true })),
-    __param(2, type_graphql_1.Ctx()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", Promise)
 ], PostResolver.prototype, "posts", null);
 __decorate([

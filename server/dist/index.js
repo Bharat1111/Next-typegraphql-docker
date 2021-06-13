@@ -29,23 +29,25 @@ const User_1 = require("./entities/User");
 const Post_1 = require("./entities/Post");
 const path_1 = __importDefault(require("path"));
 const Updoot_1 = require("./entities/Updoot");
+const createUserLoader_1 = require("./utils/createUserLoader");
+const createUpdootLoader_1 = require("./utils/createUpdootLoader");
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const conn = yield typeorm_1.createConnection({
-        type: 'postgres',
-        database: 'lireddit',
-        username: 'postgres',
-        password: 'lsg@11_',
+        type: "postgres",
+        database: "lireddit",
+        username: "postgres",
+        password: "lsg@11_",
         logging: true,
         synchronize: true,
-        migrations: [path_1.default.join(__dirname, './migrations/*')],
-        entities: [Post_1.Post, User_1.Users, Updoot_1.Updoot]
+        migrations: [path_1.default.join(__dirname, "./migrations/*")],
+        entities: [Post_1.Post, User_1.Users, Updoot_1.Updoot],
     });
     conn.runMigrations();
     const app = express_1.default();
     const RedisStore = connect_redis_1.default(express_session_1.default);
     app.use(cors_1.default({
         origin: "http://localhost:3000",
-        credentials: true
+        credentials: true,
     }));
     app.use(express_session_1.default({
         store: new RedisStore({
@@ -60,7 +62,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             httpOnly: true,
             secure: constants_1.__prod__,
             maxAge: 1000 * 60 * 60 * 24 * 7 * 365,
-            sameSite: 'lax'
+            sameSite: "lax",
         },
     }));
     const apolloServer = new apollo_server_express_1.ApolloServer({
@@ -68,11 +70,11 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             resolvers: [hello_1.HelloResolver, post_1.PostResolver, user_1.UserResolver],
             validate: false,
         }),
-        context: ({ req, res }) => ({ req, res }),
+        context: ({ req, res }) => ({ req, res, userLoader: createUserLoader_1.createUserLoader(), updootLoader: createUpdootLoader_1.createUpdootLoader() }),
     });
     apolloServer.applyMiddleware({
         app,
-        cors: false
+        cors: false,
     });
     app.listen(3001, () => {
         console.log("Server started on port 3001");

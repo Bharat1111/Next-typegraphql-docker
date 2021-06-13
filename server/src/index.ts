@@ -2,10 +2,10 @@ import "reflect-metadata";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
-import cors from 'cors'
+import cors from "cors";
 import session from "express-session";
 import connectRedis from "connect-redis";
-import { createConnection } from 'typeorm'
+import { createConnection } from "typeorm";
 
 import { COOKIE_NAME, __prod__ } from "./constants";
 import { HelloResolver } from "./resolvers/hello";
@@ -16,20 +16,22 @@ import { Users } from "./entities/User";
 import { Post } from "./entities/Post";
 import path from "path";
 import { Updoot } from "./entities/Updoot";
+import { createUserLoader } from "./utils/createUserLoader";
+import { createUpdootLoader } from "./utils/createUpdootLoader";
 
 const main = async () => {
   const conn = await createConnection({
-    type: 'postgres',
-    database: 'lireddit',
-    username: 'postgres',
-    password: 'lsg@11_',
+    type: "postgres",
+    database: "lireddit",
+    username: "postgres",
+    password: "lsg@11_",
     logging: true,
     synchronize: true,
-    migrations: [path.join(__dirname, './migrations/*')],
-    entities: [Post, Users, Updoot]
-  })
+    migrations: [path.join(__dirname, "./migrations/*")],
+    entities: [Post, Users, Updoot],
+  });
 
-  conn.runMigrations()
+  conn.runMigrations();
 
   const app = express();
 
@@ -38,9 +40,9 @@ const main = async () => {
   app.use(
     cors({
       origin: "http://localhost:3000",
-      credentials: true
+      credentials: true,
     })
-  )
+  );
   app.use(
     session({
       store: new RedisStore({
@@ -55,7 +57,7 @@ const main = async () => {
         httpOnly: true,
         secure: __prod__,
         maxAge: 1000 * 60 * 60 * 24 * 7 * 365, // 7 years
-        sameSite: 'lax'
+        sameSite: "lax",
       },
     })
   );
@@ -65,12 +67,12 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: ({ req, res }) => ({ req, res }),
+    context: ({ req, res }) => ({ req, res, userLoader: createUserLoader(), updootLoader: createUpdootLoader() }),
   });
 
-  apolloServer.applyMiddleware({ 
-    app, 
-    cors: false
+  apolloServer.applyMiddleware({
+    app,
+    cors: false,
   });
 
   app.listen(3001, () => {

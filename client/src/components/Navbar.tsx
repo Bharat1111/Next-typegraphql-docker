@@ -1,8 +1,11 @@
 import { Box, Link, Flex, Button, Heading } from "@chakra-ui/react";
 import NextLink from "next/link";
+import { useRouter } from 'next/router'
+
 import { useMeQuery, useLogoutMutation } from "../generated/graphql";
 
 const Navbar = () => {
+  const Router = useRouter()
   const [{ fetching: loading }, logout] = useLogoutMutation();
   const [{ data, fetching }] = useMeQuery();
 
@@ -34,7 +37,10 @@ const Navbar = () => {
           </Button>
         </NextLink>
         <Box mr={3}>{data.me.username}</Box>
-        <Button isLoading={loading} onClick={() => logout()} variant="link">
+        <Button isLoading={loading} onClick={async () => {
+          await logout()
+          Router.reload()
+        }} variant="link">
           Logout
         </Button>
       </Flex>
